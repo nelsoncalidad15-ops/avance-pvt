@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { PostventaDashboard } from './components/PostventaDashboard';
 import { PostventaKpiDashboard } from './components/PostventaKpiDashboard';
 import { PostventaBillingDashboard } from './components/PostventaBillingDashboard';
@@ -61,6 +61,11 @@ const MenuCard = ({ title, subtitle, icon: Icon, onClick, color }: any) => (
   </button>
 );
 
+const DashboardWrapper = ({ children }: { children: (navigate: any) => React.ReactNode }) => {
+  const navigate = useNavigate();
+  return <>{children(navigate)}</>;
+};
+
 export default function App() {
   return (
     <Router>
@@ -69,25 +74,25 @@ export default function App() {
         <Route 
           path="/operativo" 
           element={
-            <PostventaDashboard 
-              onBack={() => window.location.href = '/'}
-            />
+            <DashboardWrapper>
+              {(navigate) => <PostventaDashboard onBack={() => navigate('/')} />}
+            </DashboardWrapper>
           } 
         />
         <Route 
           path="/kpis" 
           element={
-            <PostventaKpiDashboard 
-              onBack={() => window.location.href = '/'}
-            />
+            <DashboardWrapper>
+              {(navigate) => <PostventaKpiDashboard onBack={() => navigate('/')} />}
+            </DashboardWrapper>
           } 
         />
         <Route 
           path="/billing" 
           element={
-            <PostventaBillingDashboard 
-              onBack={() => window.location.href = '/'}
-            />
+            <DashboardWrapper>
+              {(navigate) => <PostventaBillingDashboard onBack={() => navigate('/')} />}
+            </DashboardWrapper>
           } 
         />
         <Route path="*" element={<Navigate to="/" />} />
