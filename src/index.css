@@ -1,0 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-vw-blue: #001E50;
+  --color-vw-light-blue: #00B1EB;
+  --color-vw-white: #FFFFFF;
+  --color-vw-gray: #F2F2F2;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased font-sans;
+}
+
+.vw-card {
+  @apply bg-white border border-slate-100 shadow-sm rounded-[2rem] transition-all hover:shadow-md;
+}
+
+.vw-title {
+  @apply font-black uppercase tracking-tighter italic;
+}
