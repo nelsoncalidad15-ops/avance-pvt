@@ -61,7 +61,13 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
       // Otherwise, we use the selectedMonths filter
       const effectiveMonths = highlightedMonth ? [highlightedMonth] : selectedMonths;
       const monthMatch = effectiveMonths.length === 0 || effectiveMonths.includes(item.mes);
-      const branchMatch = selectedBranch === 'TODAS' || item.sucursal === selectedBranch;
+      
+      // Ensure we only include branches that are in our BRANCHES constant
+      const isAllowedBranch = BRANCHES.includes(item.sucursal);
+      const branchMatch = selectedBranch === 'TODAS' 
+        ? isAllowedBranch 
+        : item.sucursal === selectedBranch;
+        
       return yearMatch && monthMatch && branchMatch;
     });
   }, [data, selectedYear, selectedMonths, selectedBranch, highlightedMonth]);
@@ -123,27 +129,24 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
       lastUpdated="22/03/2026 19:10"
     >
       {/* Horizontal Filters */}
-      <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm mb-8">
-        <div className="flex flex-col lg:flex-row items-center gap-8">
-          <div className="flex items-center gap-3 pr-8 border-r border-slate-100">
-            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-              <Icons.Filter className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] leading-none mb-1">Filtros</h4>
-              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none">Gestión Activa</p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-8 flex-1">
-            <div className="flex items-center gap-4">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Año:</span>
-              <div className="flex gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100">
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white/70 p-6 rounded-[2rem] border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.03)] backdrop-blur-xl mb-6"
+      >
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Year */}
+            <div className="space-y-3">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <Icons.Calendar className="w-3 h-3" /> Año
+              </span>
+              <div className="flex gap-1 bg-white/40 p-1 rounded-xl w-fit border border-white/60 shadow-inner">
                 {YEARS.map(y => (
                   <button 
                     key={y}
                     onClick={() => setSelectedYear(y)}
-                    className={`px-4 py-2 rounded-lg text-[9px] font-black transition-all ${selectedYear === y ? 'bg-slate-950 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-5 py-1.5 rounded-lg text-[10px] font-black transition-all ${selectedYear === y ? 'bg-slate-950 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     {y}
                   </button>
@@ -151,40 +154,72 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
               </div>
             </div>
 
-            <div className="flex items-center gap-4 flex-1 min-w-[300px]">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Meses:</span>
-              <div className="flex-1">
-                <MonthSelector 
-                  selectedMonths={selectedMonths} 
-                  onToggle={toggleMonth} 
-                  months={MONTHS} 
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Sucursal:</span>
-              <div className="flex gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100">
+            {/* Branch */}
+            <div className="space-y-3">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <Icons.MapPin className="w-3 h-3" /> Sucursal
+              </span>
+              <div className="flex flex-wrap gap-1.5">
                 <button 
                   onClick={() => setSelectedBranch('TODAS')}
-                  className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${selectedBranch === 'TODAS' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all border ${selectedBranch === 'TODAS' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white/50 text-slate-400 border-white/60 hover:border-slate-200'}`}
                 >
-                  Todas
+                  TODAS
                 </button>
-                {BRANCHES.map(branch => (
+                {BRANCHES.map(b => (
                   <button 
-                    key={branch}
-                    onClick={() => setSelectedBranch(branch)}
-                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${selectedBranch === branch ? 'bg-slate-950 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                    key={b}
+                    onClick={() => setSelectedBranch(b)}
+                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all border ${selectedBranch === b ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white/50 text-slate-400 border-white/60 hover:border-slate-200'}`}
                   >
-                    {branch}
+                    {b}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* KPI Selection (Moved from ChartWrapper action for better visibility) */}
+            <div className="space-y-3">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <Icons.Activity className="w-3 h-3" /> Métrica Principal
+              </span>
+              <select 
+                value={selectedKpiId}
+                onChange={(e) => setSelectedKpiId(e.target.value)}
+                className="w-full bg-white/50 border border-white/60 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-tight text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm"
+              >
+                {KPI_DEFS.map(k => (
+                  <option key={k.id} value={k.id}>{k.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Months */}
+          <div className="space-y-3 pt-5 border-t border-white/40">
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Icons.Clock className="w-3 h-3" /> Meses
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              <button 
+                onClick={() => setSelectedMonths([])}
+                className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all border ${selectedMonths.length === 0 ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white/50 text-slate-400 border-white/60 hover:border-slate-200 backdrop-blur-sm'}`}
+              >
+                ANUAL
+              </button>
+              {MONTHS.map(m => (
+                <button 
+                  key={m}
+                  onClick={() => toggleMonth(m)}
+                  className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all border ${selectedMonths.includes(m) ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white/50 text-slate-400 border-white/60 hover:border-slate-200 backdrop-blur-sm'}`}
+                >
+                  {m.charAt(0) + m.slice(1, 3).toLowerCase()}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Dynamic Trend Chart - Prominent */}
       <div className="mb-10">
@@ -192,17 +227,6 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
           title={`Tendencia: ${selectedKpi?.name || 'KPI Seleccionado'}`} 
           subtitle={`Visualización histórica de ${selectedKpi?.unit || ''}`}
           className="h-[600px]"
-          action={
-            <select 
-              value={selectedKpiId}
-              onChange={(e) => setSelectedKpiId(e.target.value)}
-              className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-tight text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {KPI_DEFS.map(k => (
-                <option key={k.id} value={k.id}>{k.name}</option>
-              ))}
-            </select>
-          }
         >
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart 

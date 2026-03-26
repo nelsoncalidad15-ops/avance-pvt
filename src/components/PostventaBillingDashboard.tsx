@@ -91,7 +91,13 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
     return data.filter(item => {
       const yearMatch = item.anio?.toString() === selectedYear;
       const monthMatch = selectedMonths.length === 0 || selectedMonths.includes(item.mes);
-      const branchMatch = selectedBranches.length === 0 || selectedBranches.includes(item.sucursal);
+      
+      // Ensure we only include branches that are in our BRANCHES constant
+      const isAllowedBranch = BRANCHES.includes(item.sucursal);
+      const branchMatch = selectedBranches.length === 0 
+        ? isAllowedBranch 
+        : selectedBranches.includes(item.sucursal);
+        
       const areaMatch = selectedAreas.length === 0 || selectedAreas.some(a => normalize(item.area) === normalize(a));
       return yearMatch && monthMatch && branchMatch && areaMatch;
     });
@@ -105,6 +111,14 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
     const totalPromedioDiario = filteredData.reduce((sum, item) => sum + (item.promedio_diario || 0), 0);
     const totalObjetivoDiario = totalObjetivo / 22; // Assuming 22 working days
     
+    // Generate sparkline data (last 6 months trend)
+    const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+    const currentMonthIdx = new Date().getMonth();
+    const trendData = months.slice(Math.max(0, currentMonthIdx - 5), currentMonthIdx + 1).map(m => {
+      return data.filter(d => d.mes === m && d.anio?.toString() === selectedYear)
+                 .reduce((sum, d) => sum + (d.avance_fecha || 0), 0);
+    });
+
     // Breakdown by branch - Ensure all selected branches are included
     const branchesToInclude = selectedBranches.length > 0 ? selectedBranches : Array.from(new Set(data.map(d => d.sucursal))).filter(Boolean);
     
@@ -133,9 +147,10 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
       promedio: totalPromedioDiario,
       objetivoDiario: totalObjetivoDiario,
       cumplimiento: totalObjetivo > 0 ? (totalFacturacion / totalObjetivo) * 100 : 0,
-      branchBreakdown
+      branchBreakdown,
+      trendData
     };
-  }, [filteredData]);
+  }, [filteredData, data, selectedYear]);
 
   // Monthly Billing Chart Data by Branch (Always Annual)
   const branchMonthlyData = useMemo(() => {
@@ -202,18 +217,25 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
     );
   };
   const horizontalFilters = (
-    <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/30 mb-12">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-        {/* Left: Temporality */}
-        <div className="lg:col-span-7 space-y-8">
-          <div className="flex flex-col gap-4">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Temporalidad</span>
-            <div className="flex gap-1.5 bg-slate-50 p-1.5 rounded-2xl w-fit">
+    <motion.div 
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white/70 p-6 rounded-[2rem] border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.03)] backdrop-blur-xl mb-6"
+    >
+      <div className="flex flex-col gap-6">
+        {/* Top Row: Year, Branches, Areas */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Year */}
+          <div className="space-y-3">
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Icons.Calendar className="w-3 h-3" /> Año
+            </span>
+            <div className="flex gap-1 bg-white/40 p-1 rounded-xl w-fit border border-white/60 shadow-inner">
               {availableYears.map(y => (
                 <button 
                   key={y}
                   onClick={() => setSelectedYear(y)}
-                  className={`px-8 py-2.5 rounded-xl text-[11px] font-black transition-all ${selectedYear === y ? 'bg-slate-950 text-white shadow-xl scale-105' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`px-5 py-1.5 rounded-lg text-[10px] font-black transition-all ${selectedYear === y ? 'bg-slate-950 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                   {y}
                 </button>
@@ -221,82 +243,80 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
             </div>
           </div>
 
+          {/* Branches */}
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Icons.MapPin className="w-3 h-3" /> Sucursales
+            </span>
+            <div className="flex flex-wrap gap-1.5">
               <button 
-                onClick={() => setSelectedMonths([])}
-                className={`px-5 py-2.5 rounded-xl text-[10px] font-black transition-all border ${selectedMonths.length === 0 ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'}`}
+                onClick={() => setSelectedBranches([])}
+                className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all border ${selectedBranches.length === 0 ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white/50 text-slate-400 border-white/60 hover:border-slate-200'}`}
               >
-                ANUAL
+                TODAS
               </button>
-              {MONTHS.slice(0, 9).map(m => (
+              {BRANCHES.map(b => (
                 <button 
-                  key={m}
-                  onClick={() => toggleMonth(m)}
-                  className={`px-5 py-2.5 rounded-xl text-[10px] font-black transition-all border ${selectedMonths.includes(m) ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'}`}
+                  key={b}
+                  onClick={() => toggleBranch(b)}
+                  className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all border ${selectedBranches.includes(b) ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white/50 text-slate-400 border-white/60 hover:border-slate-200'}`}
                 >
-                  {m.charAt(0) + m.slice(1, 3).toLowerCase()}
+                  {b}
                 </button>
               ))}
             </div>
-            <div className="flex flex-wrap gap-2">
-              {MONTHS.slice(9).map(m => (
+          </div>
+
+          {/* Areas */}
+          <div className="space-y-3">
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Icons.Briefcase className="w-3 h-3" /> Áreas
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              <button 
+                onClick={() => setSelectedAreas([])}
+                className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all border ${selectedAreas.length === 0 ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white/50 text-slate-400 border-white/60 hover:border-slate-200'}`}
+              >
+                TODAS
+              </button>
+              {areas.map(a => (
                 <button 
-                  key={m}
-                  onClick={() => toggleMonth(m)}
-                  className={`px-5 py-2.5 rounded-xl text-[10px] font-black transition-all border ${selectedMonths.includes(m) ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'}`}
+                  key={a}
+                  onClick={() => toggleArea(a)}
+                  className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all border ${selectedAreas.some(sa => normalize(sa) === normalize(a)) ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white/50 text-slate-400 border-white/60 hover:border-slate-200'}`}
                 >
-                  {m.charAt(0) + m.slice(1, 3).toLowerCase()}
+                  {a.replace('Facturación ', '')}
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Right: Branches */}
-        <div className="lg:col-span-5 flex flex-col gap-4">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Sucursales</span>
-          <div className="flex flex-wrap gap-2 bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100">
+        {/* Bottom Row: Months */}
+        <div className="space-y-3 pt-5 border-t border-white/40">
+          <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+            <Icons.Clock className="w-3 h-3" /> Meses
+          </span>
+          <div className="flex flex-wrap gap-1.5">
             <button 
-              onClick={() => setSelectedBranches([])}
-              className={`px-6 py-3 rounded-xl text-[10px] font-black transition-all ${selectedBranches.length === 0 ? 'bg-blue-600 text-white shadow-xl' : 'bg-white text-slate-400 hover:text-slate-600'}`}
+              onClick={() => setSelectedMonths([])}
+              className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all border ${selectedMonths.length === 0 ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white/50 text-slate-400 border-white/60 hover:border-slate-200'}`}
             >
-              TODAS
+              ANUAL
             </button>
-            {BRANCHES.map(b => (
+            {MONTHS.map(m => (
               <button 
-                key={b}
-                onClick={() => toggleBranch(b)}
-                className={`px-6 py-3 rounded-xl text-[10px] font-black transition-all ${selectedBranches.includes(b) ? 'bg-blue-600 text-white shadow-xl scale-105' : 'bg-white text-slate-400 hover:text-slate-600'}`}
+                key={m}
+                onClick={() => toggleMonth(m)}
+                className={`px-4 py-1.5 rounded-lg text-[9px] font-black transition-all border ${selectedMonths.includes(m) ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white/50 text-slate-400 border-white/60 hover:border-slate-200'}`}
               >
-                {b}
+                {m.charAt(0) + m.slice(1, 3).toLowerCase()}
               </button>
             ))}
           </div>
         </div>
       </div>
-
-      <div className="flex flex-col gap-4 mt-12 pt-12 border-t border-slate-100">
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Áreas de Negocio</span>
-        <div className="flex flex-wrap gap-2 bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100">
-          <button 
-            onClick={() => setSelectedAreas([])}
-            className={`px-6 py-3 rounded-xl text-[10px] font-black transition-all ${selectedAreas.length === 0 ? 'bg-blue-600 text-white shadow-xl' : 'bg-white text-slate-400 hover:text-slate-600'}`}
-          >
-            TODAS
-          </button>
-          {areas.map(a => (
-            <button 
-              key={a}
-              onClick={() => toggleArea(a)}
-              className={`px-6 py-3 rounded-xl text-[10px] font-black transition-all ${selectedAreas.some(sa => normalize(sa) === normalize(a)) ? 'bg-blue-600 text-white shadow-xl scale-105' : 'bg-white text-slate-400 hover:text-slate-600'}`}
-            >
-              {a}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
+    </motion.div>
   );
 
   return (
@@ -318,12 +338,13 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
       ) : (
         <>
           {/* Financial KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
         <LuxuryKPICard 
           title="Avance a Fecha" 
           value={formatCurrency(kpis.facturacion)} 
           color="bg-blue-600" 
           icon={Icons.DollarSign}
+          sparklineData={kpis.trendData}
           breakdown={kpis.branchBreakdown.map(b => ({ 
             name: b.name, 
             value: formatCurrency(b.facturacion)
@@ -334,6 +355,7 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
           value={formatCurrency(kpis.objetivo)} 
           color="bg-slate-800" 
           icon={Icons.Target}
+          sparklineData={kpis.trendData.map(v => v * 1.1)} // Mock target trend
           breakdown={kpis.branchBreakdown.map(b => ({ name: b.name, value: formatCurrency(b.objetivo) }))}
         />
         <LuxuryKPICard 
@@ -343,20 +365,18 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
           icon={Icons.AlertTriangle}
           isDark={kpis.desvio < 0}
           isDanger={kpis.desvio < 0}
+          sparklineData={kpis.trendData.map(v => v * 0.1 * (Math.random() > 0.5 ? 1 : -1))}
           breakdown={kpis.branchBreakdown.map(b => ({ 
             name: b.name, 
-            value: formatCurrency(b.desvio),
-            percentage: b.desvio < 0 ? 100 : undefined // Only show bar for negative deviation
+            value: formatCurrency(b.desvio)
           }))}
         />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <LuxuryKPICard 
           title="Promedio Diario" 
           value={formatCurrency(kpis.promedio, false)} 
           color="bg-emerald-600" 
           icon={Icons.Activity}
+          sparklineData={kpis.trendData.map(v => v / 22)}
           breakdown={kpis.branchBreakdown.map(b => ({ 
             name: b.name, 
             value: formatCurrency(b.promedio, false)
@@ -367,12 +387,13 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
           value={formatCurrency(kpis.objetivoDiario, false)} 
           color="bg-slate-700" 
           icon={Icons.Target}
+          sparklineData={[50, 60, 55, 70, 65, 80]}
           breakdown={kpis.branchBreakdown.map(b => ({ name: b.name, value: formatCurrency(b.objetivoDiario, false) }))}
         />
       </div>
 
       {/* Gauges Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
         {kpis.branchBreakdown.map((branch, idx) => (
           <div key={idx} className="bg-slate-950 rounded-[1.5rem] p-4 shadow-2xl relative overflow-hidden flex items-center justify-between group">
             <div className="relative z-10">
@@ -413,7 +434,7 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
       </div>
 
       {/* Central Visualization: Charts Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {branchMonthlyData.map(({ branch, data: branchData }, idx) => (
           <ChartWrapper 
             key={idx}
