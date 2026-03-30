@@ -125,7 +125,7 @@ export const PostventaDashboard: React.FC<PostventaDashboardProps> = ({ onBack }
         servisTotales: branchData.reduce((sum, d) => sum + (d.avance_servicios || 0), 0),
         diasLaborables: branchData.reduce((sum, d) => sum + (d.dias_laborables || 0), 0),
       };
-    });
+    }).sort((a, b) => b.objetivo - a.objetivo);
   }, [filteredData, selectedBranches]);
 
   const totals = useMemo(() => {

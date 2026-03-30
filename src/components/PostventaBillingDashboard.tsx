@@ -141,7 +141,7 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
         objetivoDiario,
         cumplimiento
       };
-    }).sort((a, b) => b.facturacion - a.facturacion);
+    }).sort((a, b) => b.objetivo - a.objetivo);
 
     const totalCumplimiento = filteredData.length > 0
       ? filteredData.reduce((sum, d) => sum + (d.cumplimiento_fecha_pct || 0), 0) / filteredData.length
