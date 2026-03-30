@@ -472,7 +472,10 @@ export const LuxuryKPICard = ({ title, value, color, icon: Icon, trend, isDark =
     <div className="relative z-10 flex flex-col h-full">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className={`p-2 rounded-lg ${isDanger ? 'bg-rose-600 text-white animate-pulse' : `${color.replace('bg-', 'bg-').replace('-600', '-50')} ${color.replace('bg-', 'text-')}`} shadow-sm`}>
+          <div 
+            className={`p-2 rounded-lg ${isDanger ? 'bg-rose-600 text-white animate-pulse' : (color.startsWith('bg-') ? `${color.replace('-600', '-50')} ${color.replace('bg-', 'text-')}` : '')} shadow-sm`}
+            style={!isDanger && !color.startsWith('bg-') ? { backgroundColor: color + '20', color: color } : {}}
+          >
             <Icon className="w-3.5 h-3.5" />
           </div>
           <p className={`text-[8px] font-black ${isDark ? 'text-slate-500' : 'text-slate-400'} uppercase tracking-[0.2em]`}>{title}</p>
@@ -507,6 +510,7 @@ export const LuxuryKPICard = ({ title, value, color, icon: Icon, trend, isDark =
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(item.percentage, 100)}%` }}
                       className={`h-full ${isDanger ? 'bg-rose-600' : item.percentage >= 95 ? 'bg-emerald-500' : item.percentage >= 90 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                      style={!isDanger && !color.startsWith('bg-') && item.percentage >= 95 ? { backgroundColor: color } : {}}
                     />
                   </div>
                 )}
@@ -525,11 +529,15 @@ export const LuxuryKPICard = ({ title, value, color, icon: Icon, trend, isDark =
         </div>
         {sparklineData && (
           <div className="pb-1">
-            <Sparkline data={sparklineData} color={isDanger ? '#ef4444' : '#2563eb'} />
+            <Sparkline data={sparklineData} color={isDanger ? '#ef4444' : (!color.startsWith('bg-') ? color : '#2563eb')} />
           </div>
         )}
       </div>
     </div>
+    <div 
+      className={`absolute -right-12 -top-12 w-40 h-40 rounded-full opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-1000 ${color.startsWith('bg-') ? color : ''}`}
+      style={!color.startsWith('bg-') ? { backgroundColor: color } : {}}
+    ></div>
   </motion.div>
 );
 

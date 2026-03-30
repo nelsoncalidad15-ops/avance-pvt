@@ -60,7 +60,7 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
       // If a month is highlighted, we only care about that month for the KPI cards
       // Otherwise, we use the selectedMonths filter
       const effectiveMonths = highlightedMonth ? [highlightedMonth] : selectedMonths;
-      const monthMatch = effectiveMonths.length === 0 || effectiveMonths.includes(item.mes);
+      const monthMatch = effectiveMonths.length === 0 || effectiveMonths.some(m => m.toLowerCase() === item.mes?.toLowerCase());
       
       // Ensure we only include branches that are in our BRANCHES constant
       const isAllowedBranch = BRANCHES.includes(item.sucursal);
@@ -351,7 +351,7 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
             
             <div className="flex items-baseline gap-0.5">
               <span className="text-lg font-black italic tracking-tighter">
-                {(kpi.value || 0).toFixed(kpi.unit === '%' || kpi.id === 'lvs' ? 1 : 0)}
+                {Math.round(kpi.value || 0)}
               </span>
               <span className={`text-[5px] font-black uppercase ${selectedKpiId === kpi.id ? 'text-slate-500' : 'text-slate-400'}`}>
                 {kpi.unit}
@@ -382,7 +382,7 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
           { 
             header: 'Valor Actual', 
             accessor: 'value',
-            render: (val, row) => <span className="font-black text-slate-900">{(val || 0).toFixed(row.unit === '%' ? 1 : 0)}{row.unit}</span>
+            render: (val, row) => <span className="font-black text-slate-900">{Math.round(val || 0)}{row.unit}</span>
           },
           { 
             header: 'Objetivo', 
@@ -402,7 +402,7 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
                       style={{ width: `${Math.min(perc, 100)}%` }}
                     ></div>
                   </div>
-                  <span className="font-black italic">{(perc || 0).toFixed(1)}%</span>
+                  <span className="font-black italic">{Math.round(perc || 0)}%</span>
                 </div>
               );
             }

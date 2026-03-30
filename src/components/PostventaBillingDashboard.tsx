@@ -90,7 +90,7 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
   const filteredData = useMemo(() => {
     return data.filter(item => {
       const yearMatch = item.anio?.toString() === selectedYear;
-      const monthMatch = selectedMonths.length === 0 || selectedMonths.includes(item.mes);
+      const monthMatch = selectedMonths.length === 0 || selectedMonths.some(m => m.toLowerCase() === item.mes?.toLowerCase());
       
       // Ensure we only include branches that are in our BRANCHES constant
       const isAllowedBranch = BRANCHES.includes(item.sucursal);
@@ -112,10 +112,10 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
     const totalObjetivoDiario = totalObjetivo / 22; // Assuming 22 working days
     
     // Generate sparkline data (last 6 months trend)
-    const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const currentMonthIdx = new Date().getMonth();
     const trendData = months.slice(Math.max(0, currentMonthIdx - 5), currentMonthIdx + 1).map(m => {
-      return data.filter(d => d.mes === m && d.anio?.toString() === selectedYear)
+      return data.filter(d => d.mes?.toLowerCase() === m.toLowerCase() && d.anio?.toString() === selectedYear)
                  .reduce((sum, d) => sum + (d.avance_fecha || 0), 0);
     });
 
@@ -129,6 +129,9 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
       const desvio = branchData.reduce((sum, d) => sum + (d.desvio_fecha || 0), 0);
       const promedio = branchData.reduce((sum, d) => sum + (d.promedio_diario || 0), 0);
       const objetivoDiario = objetivo / 22;
+      const cumplimiento = branchData.length > 0 
+        ? branchData.reduce((sum, d) => sum + (d.cumplimiento_fecha_pct || 0), 0) / branchData.length 
+        : 0;
       return {
         name: branch,
         facturacion,
@@ -136,9 +139,13 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
         desvio,
         promedio,
         objetivoDiario,
-        cumplimiento: objetivo > 0 ? (facturacion / objetivo) * 100 : 0
+        cumplimiento
       };
     }).sort((a, b) => b.facturacion - a.facturacion);
+
+    const totalCumplimiento = filteredData.length > 0
+      ? filteredData.reduce((sum, d) => sum + (d.cumplimiento_fecha_pct || 0), 0) / filteredData.length
+      : 0;
 
     return {
       facturacion: totalFacturacion,
@@ -146,7 +153,7 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
       desvio: totalDesvio,
       promedio: totalPromedioDiario,
       objetivoDiario: totalObjetivoDiario,
-      cumplimiento: totalObjetivo > 0 ? (totalFacturacion / totalObjetivo) * 100 : 0,
+      cumplimiento: totalCumplimiento,
       branchBreakdown,
       trendData
     };
@@ -161,7 +168,7 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
     
     const branchesToRender = selectedBranches.length > 0 ? selectedBranches : BRANCHES;
 
-    return branchesToRender.map(branch => {
+    const results = branchesToRender.map(branch => {
       const branchData = months.map((m, index) => {
         const monthData = data.filter(d => 
           d.sucursal === branch &&
@@ -177,7 +184,15 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
         };
       });
       return { branch, data: branchData };
-    }).filter(b => b.data.some(d => d.facturacion > 0));
+    });
+
+    return results
+      .filter(b => b.data.some(d => d.facturacion > 0))
+      .sort((a, b) => {
+        const totalA = a.data.reduce((sum, d) => sum + d.facturacion, 0);
+        const totalB = b.data.reduce((sum, d) => sum + d.facturacion, 0);
+        return totalB - totalA;
+      });
   }, [data, selectedYear, selectedMonths, selectedBranches, selectedAreas]);
 
   const formatCurrency = (value: number, inMillions: boolean = true) => {
@@ -338,95 +353,102 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
       ) : (
         <>
           {/* Financial KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
-        <LuxuryKPICard 
-          title="Avance a Fecha" 
-          value={formatCurrency(kpis.facturacion)} 
-          color="bg-blue-600" 
-          icon={Icons.DollarSign}
-          sparklineData={kpis.trendData}
-          breakdown={kpis.branchBreakdown.map(b => ({ 
-            name: b.name, 
-            value: formatCurrency(b.facturacion)
-          }))}
-        />
-        <LuxuryKPICard 
-          title="Objetivo Facturación" 
-          value={formatCurrency(kpis.objetivo)} 
-          color="bg-slate-800" 
-          icon={Icons.Target}
-          sparklineData={kpis.trendData.map(v => v * 1.1)} // Mock target trend
-          breakdown={kpis.branchBreakdown.map(b => ({ name: b.name, value: formatCurrency(b.objetivo) }))}
-        />
-        <LuxuryKPICard 
-          title="Desvío a Fecha" 
-          value={formatCurrency(kpis.desvio)} 
-          color={kpis.desvio < 0 ? 'bg-rose-600' : 'bg-emerald-600'} 
-          icon={Icons.AlertTriangle}
-          isDark={kpis.desvio < 0}
-          isDanger={kpis.desvio < 0}
-          sparklineData={kpis.trendData.map(v => v * 0.1 * (Math.random() > 0.5 ? 1 : -1))}
-          breakdown={kpis.branchBreakdown.map(b => ({ 
-            name: b.name, 
-            value: formatCurrency(b.desvio)
-          }))}
-        />
-        <LuxuryKPICard 
-          title="Promedio Diario" 
-          value={formatCurrency(kpis.promedio, false)} 
-          color="bg-emerald-600" 
-          icon={Icons.Activity}
-          sparklineData={kpis.trendData.map(v => v / 22)}
-          breakdown={kpis.branchBreakdown.map(b => ({ 
-            name: b.name, 
-            value: formatCurrency(b.promedio, false)
-          }))}
-        />
-        <LuxuryKPICard 
-          title="Objetivo Diario" 
-          value={formatCurrency(kpis.objetivoDiario, false)} 
-          color="bg-slate-700" 
-          icon={Icons.Target}
-          sparklineData={[50, 60, 55, 70, 65, 80]}
-          breakdown={kpis.branchBreakdown.map(b => ({ name: b.name, value: formatCurrency(b.objetivoDiario, false) }))}
-        />
-      </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <LuxuryKPICard 
+              title="Objetivo Facturación" 
+              value={formatCurrency(kpis.objetivo)} 
+              color="bg-slate-800" 
+              icon={Icons.Target}
+              sparklineData={kpis.trendData.map(v => v * 1.1)} // Mock target trend
+              breakdown={kpis.branchBreakdown.map(b => ({ name: b.name, value: formatCurrency(b.objetivo) }))}
+            />
+            <LuxuryKPICard 
+              title="Avance a Fecha" 
+              value={formatCurrency(kpis.facturacion)} 
+              color="bg-blue-600" 
+              icon={Icons.DollarSign}
+              sparklineData={kpis.trendData}
+              breakdown={kpis.branchBreakdown.map(b => ({ 
+                name: b.name, 
+                value: formatCurrency(b.facturacion)
+              }))}
+            />
+            <LuxuryKPICard 
+              title="Desvío a Fecha" 
+              value={formatCurrency(kpis.desvio)} 
+              color={kpis.desvio < 0 ? 'bg-rose-600' : 'bg-emerald-600'} 
+              icon={Icons.AlertTriangle}
+              isDark={kpis.desvio < 0}
+              isDanger={kpis.desvio < 0}
+              sparklineData={kpis.trendData.map(v => v * 0.1 * (Math.random() > 0.5 ? 1 : -1))}
+              breakdown={kpis.branchBreakdown.map(b => ({ 
+                name: b.name, 
+                value: formatCurrency(b.desvio)
+              }))}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="lg:col-start-2">
+              <LuxuryKPICard 
+                title="Objetivo Diario" 
+                value={formatCurrency(kpis.objetivoDiario, false)} 
+                color="bg-slate-700" 
+                icon={Icons.Target}
+                sparklineData={[50, 60, 55, 70, 65, 80]}
+                breakdown={kpis.branchBreakdown.map(b => ({ name: b.name, value: formatCurrency(b.objetivoDiario, false) }))}
+              />
+            </div>
+            <div>
+              <LuxuryKPICard 
+                title="Promedio Diario" 
+                value={formatCurrency(kpis.promedio, false)} 
+                color="bg-emerald-600" 
+                icon={Icons.Activity}
+                sparklineData={kpis.trendData.map(v => v / 22)}
+                breakdown={kpis.branchBreakdown.map(b => ({ 
+                  name: b.name, 
+                  value: formatCurrency(b.promedio, false)
+                }))}
+              />
+            </div>
+          </div>
 
       {/* Gauges Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
         {kpis.branchBreakdown.map((branch, idx) => (
-          <div key={idx} className="bg-slate-950 rounded-[1.5rem] p-4 shadow-2xl relative overflow-hidden flex items-center justify-between group">
+          <div key={idx} className="bg-slate-950 rounded-[2rem] p-6 shadow-2xl relative overflow-hidden flex items-center justify-between group border border-white/5">
             <div className="relative z-10">
-              <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Cumplimiento {branch.name}</p>
-              <h4 className={`text-2xl font-black tracking-tighter italic leading-none ${
-                branch.cumplimiento >= 95 ? 'text-emerald-500' : branch.cumplimiento >= 90 ? 'text-amber-500' : 'text-rose-500'
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2">Cumplimiento {branch.name}</p>
+              <h4 className={`text-4xl font-black tracking-tighter italic leading-none ${
+                branch.cumplimiento * 100 >= 95 ? 'text-emerald-500' : branch.cumplimiento * 100 >= 90 ? 'text-amber-500' : 'text-rose-500'
               }`}>
-                {(branch.cumplimiento || 0).toFixed(1)}%
+                {Math.round(branch.cumplimiento * 100)}%
               </h4>
             </div>
-            <div className="w-12 h-12 relative z-10">
+            <div className="w-20 h-20 relative z-10">
               <GaugeChart 
-                value={branch.cumplimiento} 
-                color={branch.cumplimiento >= 95 ? '#10b981' : branch.cumplimiento >= 90 ? '#f59e0b' : '#ef4444'}
+                value={branch.cumplimiento * 100} 
+                color={branch.cumplimiento * 100 >= 95 ? '#10b981' : branch.cumplimiento * 100 >= 90 ? '#f59e0b' : '#ef4444'}
               />
             </div>
           </div>
         ))}
         {/* Global Gauge if multiple branches selected */}
         {kpis.branchBreakdown.length > 1 && (
-          <div className="bg-slate-900 rounded-[1.5rem] p-4 shadow-2xl relative overflow-hidden flex items-center justify-between group border border-white/5">
+          <div className="bg-slate-900 rounded-[2rem] p-6 shadow-2xl relative overflow-hidden flex items-center justify-between group border border-blue-500/20">
             <div className="relative z-10">
-              <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Cumplimiento Total</p>
-              <h4 className={`text-2xl font-black tracking-tighter italic leading-none ${
-                kpis.cumplimiento >= 95 ? 'text-emerald-500' : kpis.cumplimiento >= 90 ? 'text-amber-500' : 'text-rose-500'
+              <p className="text-[10px] font-black text-blue-400/60 uppercase tracking-[0.3em] mb-2">Cumplimiento Total</p>
+              <h4 className={`text-4xl font-black tracking-tighter italic leading-none ${
+                kpis.cumplimiento * 100 >= 95 ? 'text-emerald-500' : kpis.cumplimiento * 100 >= 90 ? 'text-amber-500' : 'text-rose-500'
               }`}>
-                {(kpis.cumplimiento || 0).toFixed(1)}%
+                {Math.round(kpis.cumplimiento * 100)}%
               </h4>
             </div>
-            <div className="w-12 h-12 relative z-10">
+            <div className="w-20 h-20 relative z-10">
               <GaugeChart 
-                value={kpis.cumplimiento} 
-                color={kpis.cumplimiento >= 95 ? '#10b981' : kpis.cumplimiento >= 90 ? '#f59e0b' : '#ef4444'}
+                value={kpis.cumplimiento * 100} 
+                color={kpis.cumplimiento * 100 >= 95 ? '#10b981' : kpis.cumplimiento * 100 >= 90 ? '#f59e0b' : '#ef4444'}
               />
             </div>
           </div>
@@ -532,12 +554,13 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
             accessor: 'cumplimiento_fecha_pct',
             render: (val) => {
               const numVal = parseFloat(val?.toString().replace('%', '').replace(',', '.')) || 0;
+              const displayVal = Math.round(numVal * 100);
               return (
                 <div className="flex items-center gap-2">
-                  <span className={`font-black italic ${numVal >= 95 ? 'text-emerald-600' : numVal >= 90 ? 'text-amber-600' : 'text-rose-600'}`}>
-                    {numVal.toFixed(1)}%
+                  <span className={`font-black italic ${displayVal >= 95 ? 'text-emerald-600' : displayVal >= 90 ? 'text-amber-600' : 'text-rose-600'}`}>
+                    {displayVal}%
                   </span>
-                  <div className={`w-1.5 h-1.5 rounded-full ${numVal >= 95 ? 'bg-emerald-500' : numVal >= 90 ? 'bg-amber-500' : 'bg-rose-500'}`}></div>
+                  <div className={`w-1.5 h-1.5 rounded-full ${displayVal >= 95 ? 'bg-emerald-500' : displayVal >= 90 ? 'bg-amber-500' : 'bg-rose-500'}`}></div>
                 </div>
               );
             }
@@ -547,8 +570,9 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
             accessor: 'cumplimiento_fecha_pct',
             render: (val) => {
               const numVal = parseFloat(val?.toString().replace('%', '').replace(',', '.')) || 0;
-              if (numVal >= 95) return <StatusBadge status="success" label="En Meta" />;
-              if (numVal >= 90) return <StatusBadge status="warning" label="Alerta" />;
+              const displayVal = Math.round(numVal * 100);
+              if (displayVal >= 95) return <StatusBadge status="success" label="En Meta" />;
+              if (displayVal >= 90) return <StatusBadge status="warning" label="Alerta" />;
               return <StatusBadge status="error" label="Crítico" />;
             }
           }

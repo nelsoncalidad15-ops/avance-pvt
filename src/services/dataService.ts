@@ -2,6 +2,17 @@ import Papa from 'papaparse';
 import { AutoRecord, PostventaKpiRecord, BillingRecord } from '../types';
 import { MOCK_DATA } from '../constants';
 
+const normalizeSucursal = (suc: string): string => {
+  if (!suc) return '';
+  const s = suc.trim().toUpperCase();
+  if (s === 'MOVIL' || s === 'TALLER MOVIL') return 'MOVIL';
+  if (s === 'JUJUY') return 'Jujuy';
+  if (s === 'SANTA FE') return 'Santa Fe';
+  if (s === 'EXPRESS') return 'Express';
+  if (s === 'TARTAGAL') return 'Tartagal';
+  return suc.trim();
+};
+
 const parseNumber = (val: any): number => {
   if (typeof val === 'number') return val;
   if (!val || val === 'NA' || val === 'N/A') return 0;
@@ -27,7 +38,48 @@ const parseNumber = (val: any): number => {
 };
 
 const parsePercentage = (val: any): number => {
-  return parseNumber(val);
+  if (val === undefined || val === null || val === '') return 0;
+  const s = String(val).trim().replace(',', '.');
+  const hasPercent = s.includes('%');
+  const clean = s.replace('%', '');
+  const num = parseFloat(clean);
+  if (isNaN(num)) return 0;
+  // If it had a % sign, or if the number is > 1 (e.g. 85 meaning 85%), divide by 100
+  return hasPercent || num > 1 ? num / 100 : num;
+};
+
+const normalizeMonth = (m: any): string => {
+  if (m === undefined || m === null) return '';
+  const MONTHS_LIST = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  const ABBRS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  const ENGLISH = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  
+  const s = String(m).trim().toLowerCase();
+  if (!s) return '';
+  
+  // Try full name Spanish
+  let idx = MONTHS_LIST.findIndex(month => month.toLowerCase() === s);
+  if (idx !== -1) return MONTHS_LIST[idx];
+  
+  // Try full name English
+  idx = ENGLISH.findIndex(month => month.toLowerCase() === s);
+  if (idx !== -1) return MONTHS_LIST[idx];
+  
+  // Try abbreviation Spanish
+  idx = ABBRS.findIndex(abbr => abbr.toLowerCase() === s);
+  if (idx !== -1) return MONTHS_LIST[idx];
+  
+  // Handle "Setiembre" common variation
+  if (s === 'setiembre' || s === 'set') return "Septiembre";
+  
+  // Try number
+  const num = parseInt(s);
+  if (!isNaN(num) && num >= 1 && num <= 12) {
+    return MONTHS_LIST[num - 1];
+  }
+  
+  // Capitalize first letter as fallback
+  return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
 export const fetchSheetData = async (url: string): Promise<AutoRecord[]> => {
@@ -38,29 +90,41 @@ export const fetchSheetData = async (url: string): Promise<AutoRecord[]> => {
       download: true,
       header: true,
       delimiter: "", // Auto-detect delimiter
-      dynamicTyping: false, // Disable dynamicTyping to handle number parsing manually
-      skipEmptyLines: true,
+      dynamicTyping: false, 
+      skipEmptyLines: 'greedy',
       complete: (results) => {
-        const mappedData = results.data.map((row: any, index: number) => ({
-          id: index.toString(),
-          nro_mes: parseNumber(row['Nro - Mes']),
-          mes: row['MES'],
-          sucursal: row['Suc.'],
-          semana_1: parseNumber(row['Semana 1']),
-          semana_2: parseNumber(row['Semana 2']),
-          semana_3: parseNumber(row['Semana 3']),
-          semana_4: parseNumber(row['Semana 4']),
-          semana_5: parseNumber(row['Semana 5']),
-          avance_ppt: parseNumber(row['Avance PPT']),
-          dias_laborables: parseNumber(row['DIA LAB.']),
-          ppt_diarios: parseNumber(row['PPT DIARIOS']),
-          avance_servicios: parseNumber(row['Avance Servis']),
-          servicios_diarios: parseNumber(row['servis DIARIOS']),
-          servis_vs_ppt: parsePercentage(row['% Servis Vs PPT']),
-          objetivo_mensual: parseNumber(row['OBJ MENSUAL']),
-          objetivo_ppt: parsePercentage(row['OBJ PPT']),
-          anio: parseNumber(row['AÑO'])
-        })).filter((d: any) => d.mes && d.sucursal); // Filter out empty rows
+        const mappedData = results.data.map((row: any, index: number) => {
+          const nro_mes = parseNumber(getVal(row, ['Nro - Mes', 'Nro Mes', 'NRO MES', 'Mes Nro', 'Nro_Mes']));
+          const rawMes = getVal(row, ['MES', 'Mes', 'Month', 'MONTH']);
+          
+          return {
+            id: index.toString(),
+            nro_mes: nro_mes,
+            mes: normalizeMonth(rawMes || nro_mes),
+            sucursal: normalizeSucursal(getVal(row, ['Suc.', 'Sucursal', 'SUCURSAL', 'Suc'])),
+            semana_1: parseNumber(getVal(row, ['Semana 1', 'SEMANA 1'])),
+            semana_2: parseNumber(getVal(row, ['Semana 2', 'SEMANA 2'])),
+            semana_3: parseNumber(getVal(row, ['Semana 3', 'SEMANA 3'])),
+            semana_4: parseNumber(getVal(row, ['Semana 4', 'SEMANA 4'])),
+            semana_5: parseNumber(getVal(row, ['Semana 5', 'SEMANA 5'])),
+            avance_ppt: parseNumber(getVal(row, ['Avance PPT', 'AVANCE PPT', 'Avance'])),
+            dias_laborables: parseNumber(getVal(row, ['DIA LAB.', 'Dias Lab', 'DIAS LABORABLES', 'DIA LAB'])),
+            ppt_diarios: parseNumber(getVal(row, ['PPT DIARIOS', 'PPT Diario', 'PPT_DIARIOS'])),
+            avance_servicios: parseNumber(getVal(row, ['Avance Servis', 'Avance Servicios', 'AVANCE SERVICIOS', 'Avance Serv'])),
+            servicios_diarios: parseNumber(getVal(row, ['servis DIARIOS', 'Servicios Diarios', 'SERVIS DIARIOS'])),
+            servis_vs_ppt: parsePercentage(getVal(row, ['% Servis Vs PPT', 'Servis vs PPT', 'SERVIS VS PPT'])),
+            objetivo_mensual: parseNumber(getVal(row, ['OBJ MENSUAL', 'Objetivo Mensual', 'OBJETIVO', 'OBJ_MENSUAL'])),
+            objetivo_ppt: parsePercentage(getVal(row, ['OBJ PPT', 'Objetivo PPT', 'OBJ_PPT'])),
+            anio: (() => {
+              let a = parseNumber(getVal(row, ['AÑO', 'Año', 'Anio', 'Year', 'YEAR', 'ANIO']));
+              if (a > 0 && a < 100) {
+                if (a < 50) a += 2000;
+                else a += 1900;
+              }
+              return a;
+            })()
+          };
+        }).filter((d: any) => d.mes && d.sucursal);
         
         resolve(mappedData);
       },
@@ -95,7 +159,7 @@ export const fetchPostventaKpiData = async (url: string): Promise<PostventaKpiRe
 
         const mappedData = results.data.map((row: any, index: number) => ({
           id: index.toString(),
-          sucursal: String(getVal(row, ['Sucursal', 'Suc.', 'SUCURSAL', 'Suc']) || '').trim(),
+          sucursal: normalizeSucursal(getVal(row, ['Sucursal', 'Suc.', 'SUCURSAL', 'Suc'])),
           mes: String(getVal(row, ['Mes', 'MES', 'Month']) || '').trim(),
           anio: (() => {
             const a = parseNumber(getVal(row, ['AÑO', 'Año', 'Anio', 'Year']));
@@ -195,7 +259,7 @@ export const fetchPostventaBillingData = async (url: string): Promise<BillingRec
             }
             return m;
           })(),
-          sucursal: getVal(row, ['Sucursal', 'Suc.', 'SUCURSAL', 'Suc']),
+          sucursal: normalizeSucursal(getVal(row, ['Sucursal', 'Suc.', 'SUCURSAL', 'Suc'])),
           area: getVal(row, ['AREA', 'Area', 'Área', 'Sector']),
           objetivo_mensual: parseNumber(getVal(row, ['OBJETIVO MENSUAL', 'OBJ MENSUAL', 'Objetivo'])),
           avance_fecha: parseNumber(getVal(row, ['AVANCE A FECHA', 'AVANCE FECHA', 'Avance'])),

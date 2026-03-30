@@ -33,12 +33,12 @@ export const MONTHS = [
 
 export const YEARS = ["2024", "2025", "2026"];
 
-export const BRANCHES = ["Jujuy", "Express", "Taller Movil", "Santa Fe", "Tartagal"];
+export const BRANCHES = ["Jujuy", "Express", "MOVIL", "Santa Fe", "Tartagal"];
 
 export const BRANCH_COLORS = {
   "Jujuy": "#3b82f6",
   "Express": "#6366f1",
-  "Taller Movil": "#f59e0b",
+  "MOVIL": "#f59e0b",
   "Santa Fe": "#10b981",
   "Tartagal": "#ec4899",
   "TODAS": "#0f172a"

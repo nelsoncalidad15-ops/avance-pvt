@@ -58,11 +58,6 @@ const BranchKpiCard = ({ title, icon: Icon, color, branchData, total, unit = "" 
         <div key={branch.name} className="flex justify-between items-start border-b border-slate-100/40 pb-3 last:border-0">
           <div className="flex flex-col">
             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{branch.name}</span>
-            {branch.subValue1 !== undefined && branch.subValue2 !== undefined && (
-              <span className="text-[8px] font-bold text-slate-300 uppercase mt-1">
-                K: {(branch.subValue1 || 0).toFixed(1)} M: {(branch.subValue2 || 0).toFixed(1)}
-              </span>
-            )}
           </div>
           <span className="text-xl font-black text-slate-950 tracking-tighter italic leading-none">
             {branch.value.toLocaleString()}{unit}
@@ -104,7 +99,7 @@ export const PostventaDashboard: React.FC<PostventaDashboardProps> = ({ onBack }
   const filteredData = useMemo(() => {
     return data.filter(item => {
       const yearMatch = item.anio?.toString() === selectedYear;
-      const monthMatch = selectedMonths.length === 0 || selectedMonths.includes(item.mes);
+      const monthMatch = selectedMonths.length === 0 || selectedMonths.some(m => m.toLowerCase() === item.mes?.toLowerCase());
       
       // Ensure we only include branches that are in our BRANCHES constant
       const isAllowedBranch = BRANCHES.includes(item.sucursal);
@@ -281,23 +276,21 @@ export const PostventaDashboard: React.FC<PostventaDashboardProps> = ({ onBack }
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6 mb-12">
         <BranchKpiCard 
-          title="AVANCE DE PPT" 
-          icon={Icons.Activity} 
-          color="bg-blue-600"
-          branchData={branchKpis.map(b => ({ 
-            name: b.name, 
-            value: b.avance,
-            subValue1: b.pptDiarios,
-            subValue2: b.servisDiarios
-          }))}
-          total={totals.avance}
-        />
-        <BranchKpiCard 
           title="OBJETIVO PPT" 
           icon={Icons.Target} 
           color="bg-emerald-600"
           branchData={branchKpis.map(b => ({ name: b.name, value: b.objetivo }))}
           total={totals.objetivo}
+        />
+        <BranchKpiCard 
+          title="AVANCE DE PPT" 
+          icon={Icons.Activity} 
+          color="bg-blue-600"
+          branchData={branchKpis.map(b => ({ 
+            name: b.name, 
+            value: b.avance
+          }))}
+          total={totals.avance}
         />
         <BranchKpiCard 
           title="PPT DIARIOS (COL K)" 
@@ -360,7 +353,7 @@ export const PostventaDashboard: React.FC<PostventaDashboardProps> = ({ onBack }
                   <GaugeChart value={perc} color={color} />
                 </div>
                 <div className="text-2xl font-black italic tracking-tighter mb-1 text-white group-hover:scale-110 transition-transform duration-500 leading-none drop-shadow-2xl antialiased">
-                  {(perc || 0).toFixed(1)}%
+                  {Math.round(perc || 0)}%
                 </div>
                 <div className="text-[9px] font-black uppercase tracking-[0.4em] text-blue-500 group-hover:text-white transition-colors antialiased text-center">
                   {branch.name}
