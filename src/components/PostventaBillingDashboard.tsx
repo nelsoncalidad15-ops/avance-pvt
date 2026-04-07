@@ -388,32 +388,6 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="lg:col-start-2">
-              <LuxuryKPICard 
-                title="Objetivo Diario" 
-                value={formatCurrency(kpis.objetivoDiario, false)} 
-                color="bg-slate-700" 
-                icon={Icons.Target}
-                sparklineData={[50, 60, 55, 70, 65, 80]}
-                breakdown={kpis.branchBreakdown.map(b => ({ name: b.name, value: formatCurrency(b.objetivoDiario, false) }))}
-              />
-            </div>
-            <div>
-              <LuxuryKPICard 
-                title="Promedio Diario" 
-                value={formatCurrency(kpis.promedio, false)} 
-                color="bg-emerald-600" 
-                icon={Icons.Activity}
-                sparklineData={kpis.trendData.map(v => v / 22)}
-                breakdown={kpis.branchBreakdown.map(b => ({ 
-                  name: b.name, 
-                  value: formatCurrency(b.promedio, false)
-                }))}
-              />
-            </div>
-          </div>
-
       {/* Gauges Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
         {kpis.branchBreakdown.map((branch, idx) => (
@@ -453,6 +427,32 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
             </div>
           </div>
         )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 mt-4">
+        <div className="lg:col-start-2">
+          <LuxuryKPICard 
+            title="Objetivo Diario" 
+            value={formatCurrency(kpis.objetivoDiario, false)} 
+            color="bg-slate-700" 
+            icon={Icons.Target}
+            sparklineData={[50, 60, 55, 70, 65, 80]}
+            breakdown={kpis.branchBreakdown.map(b => ({ name: b.name, value: formatCurrency(b.objetivoDiario, false) }))}
+          />
+        </div>
+        <div>
+          <LuxuryKPICard 
+            title="Promedio Diario" 
+            value={formatCurrency(kpis.promedio, false)} 
+            color="bg-emerald-600" 
+            icon={Icons.Activity}
+            sparklineData={kpis.trendData.map(v => v / 22)}
+            breakdown={kpis.branchBreakdown.map(b => ({ 
+              name: b.name, 
+              value: formatCurrency(b.promedio, false)
+            }))}
+          />
+        </div>
       </div>
 
       {/* Central Visualization: Charts Section */}
