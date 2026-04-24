@@ -208,17 +208,16 @@ export interface PostventaKpiRecord {
   ppt_diario: number | null;
   conversion_ppt_serv: number | null;
   oudi_servicios: number | null;
+  grado_ocupacion: number | null;
+  productividad: number | null;
   costos_controlables: number | null;
   costo_sueldos: number | null;
   stock_muerto: number | null;
   meses_stock: number | null;
   cotizacion_seguros: number | null;
   uodi_repuestos: number | null;
+  margen_bruto_primario: number | null;
   uodi_posventa: number | null;
-  incentivo_calidad: number | null;
-  plan_incentivo_posventa: number | null;
-  plan_incentivo_repuestos: number | null;
-  uops_total: number | null;
   [key: string]: any;
 }
 

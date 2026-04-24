@@ -37,7 +37,7 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
   const [selectedYear, setSelectedYear] = useState<string>('2025');
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<string>('TODAS');
-  const [selectedKpiId, setSelectedKpiId] = useState<string>(KPI_DEFS[0].id);
+  const [selectedKpiIds, setSelectedKpiIds] = useState<string[]>([KPI_DEFS[0].id]);
   const [highlightedMonth, setHighlightedMonth] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,6 +54,11 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
     loadData();
   }, []);
 
+  const availableBranches = useMemo(() => {
+    const dataBranches = Array.from(new Set(data.map(d => d.sucursal))).filter(Boolean);
+    return BRANCHES.filter(b => dataBranches.includes(b));
+  }, [data]);
+
   const filteredData = useMemo(() => {
     return data.filter(item => {
       const yearMatch = item.anio?.toString() === selectedYear;
@@ -63,32 +68,38 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
       const monthMatch = effectiveMonths.length === 0 || effectiveMonths.some(m => m.toLowerCase() === item.mes?.toLowerCase());
       
       // Ensure we only include branches that are in our BRANCHES constant
-      const isAllowedBranch = BRANCHES.includes(item.sucursal);
+      const isAllowedBranch = availableBranches.includes(item.sucursal);
       const branchMatch = selectedBranch === 'TODAS' 
         ? isAllowedBranch 
         : item.sucursal === selectedBranch;
         
       return yearMatch && monthMatch && branchMatch;
     });
-  }, [data, selectedYear, selectedMonths, selectedBranch, highlightedMonth]);
+  }, [data, selectedYear, selectedMonths, selectedBranch, highlightedMonth, availableBranches]);
 
-  // Trend Chart Data - Always Annual
-  const trendChartData = useMemo(() => {
+  // Trend Chart Data - Always Annual, now handles multiple IDs
+  const getTrendDataForKpi = (kpiId: string) => {
+    const kpiDef = KPI_DEFS.find(k => k.id === kpiId);
     return MONTHS.map(m => {
-      const monthData = data.filter(d => d.mes === m && d.anio?.toString() === selectedYear && (selectedBranch === 'TODAS' || d.sucursal === selectedBranch));
-      const values = monthData.map(d => (d as any)[selectedKpiId] || 0).filter(v => v > 0);
+      const monthData = data.filter(d => 
+        (d.mes === m || d.mes?.toLowerCase() === m.toLowerCase()) && 
+        d.anio?.toString() === selectedYear && 
+        (selectedBranch === 'TODAS' || d.sucursal === selectedBranch)
+      );
+      const values = monthData.map(d => (d as any)[kpiId] || 0).filter(v => v > 0);
       const avgValue = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
       
-      const kpiDef = KPI_DEFS.find(k => k.id === selectedKpiId);
+      const displayVal = kpiDef?.unit === '%' ? avgValue * 100 : avgValue;
+
       return {
         name: m.substring(0, 3),
         fullName: m,
-        valor: avgValue,
+        valor: displayVal,
         objetivo: kpiDef?.target || 0,
         isHighlighted: highlightedMonth === m || (selectedMonths.includes(m) && !highlightedMonth)
       };
     });
-  }, [data, selectedYear, selectedBranch, selectedKpiId, highlightedMonth, selectedMonths]);
+  };
 
   // KPI Calculations for the grid
   const kpiResults = useMemo(() => {
@@ -118,7 +129,18 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
     );
   };
 
-  const selectedKpi = KPI_DEFS.find(k => k.id === selectedKpiId);
+  const toggleKpi = (id: string) => {
+    setSelectedKpiIds(prev => {
+      if (prev.includes(id)) {
+        if (prev.length === 1) return prev;
+        return prev.filter(k => k !== id);
+      }
+      if (prev.length >= 3) {
+        return [...prev.slice(1), id];
+      }
+      return [...prev, id];
+    });
+  };
 
   return (
     <DashboardFrame 
@@ -166,7 +188,7 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
                 >
                   TODAS
                 </button>
-                {BRANCHES.map(b => (
+                {availableBranches.map(b => (
                   <button 
                     key={b}
                     onClick={() => setSelectedBranch(b)}
@@ -178,20 +200,24 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
               </div>
             </div>
 
-            {/* KPI Selection (Moved from ChartWrapper action for better visibility) */}
+            {/* KPI Selection */}
             <div className="space-y-3">
               <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                <Icons.Activity className="w-3 h-3" /> Métrica Principal
+                <Icons.Activity className="w-3 h-3" /> Métricas (Máx 3)
               </span>
-              <select 
-                value={selectedKpiId}
-                onChange={(e) => setSelectedKpiId(e.target.value)}
-                className="w-full bg-white/50 border border-white/60 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-tight text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm"
-              >
-                {KPI_DEFS.map(k => (
-                  <option key={k.id} value={k.id}>{k.name}</option>
-                ))}
-              </select>
+              <div className="flex flex-wrap gap-2">
+                {selectedKpiIds.map(id => {
+                  const kpi = KPI_DEFS.find(k => k.id === id);
+                  return (
+                    <div key={id} className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase">
+                      {kpi?.name}
+                      <button onClick={() => toggleKpi(id)} className="hover:text-rose-400">
+                        <Icons.X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -221,102 +247,110 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
         </div>
       </motion.div>
 
-      {/* Dynamic Trend Chart - Prominent */}
-      <div className="mb-10">
-        <ChartWrapper 
-          title={`Tendencia: ${selectedKpi?.name || 'KPI Seleccionado'}`} 
-          subtitle={`Visualización histórica de ${selectedKpi?.unit || ''}`}
-          className="h-[600px]"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart 
-              data={trendChartData} 
-              margin={{ top: 40, right: 40, left: 20, bottom: 20 }}
-              onClick={(data: any) => {
-                if (data && data.activePayload && data.activePayload[0]) {
-                  const month = data.activePayload[0].payload.fullName;
-                  setHighlightedMonth(prev => prev === month ? null : month);
-                }
-              }}
+      {/* Dynamic Trend Charts - Prominent */}
+      <div className="grid grid-cols-1 gap-6 mb-10">
+        {selectedKpiIds.map(kpiId => {
+          const kpi = KPI_DEFS.find(k => k.id === kpiId);
+          const chartData = getTrendDataForKpi(kpiId);
+          
+          return (
+            <ChartWrapper 
+              key={kpiId}
+              title={`Tendencia: ${kpi?.name || 'KPI Seleccionado'}`} 
+              subtitle={`Visualización histórica de ${kpi?.unit || ''}`}
+              className="h-[400px]"
             >
-              <defs>
-                <linearGradient id="colorKpi" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="name" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} 
-                dy={10}
-              />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} 
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  borderRadius: '20px', 
-                  border: 'none', 
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                  padding: '20px'
-                }}
-                itemStyle={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase' }}
-              />
-              <Legend 
-                verticalAlign="top" 
-                align="right" 
-                iconType="circle"
-                wrapperStyle={{ paddingBottom: '40px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px' }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="valor" 
-                name="Valor Real" 
-                stroke="#2563eb" 
-                strokeWidth={4} 
-                fillOpacity={1} 
-                fill="url(#colorKpi)" 
-                dot={(props: any) => {
-                  const { cx, cy, payload } = props;
-                  return (
-                    <circle 
-                      key={`dot-${payload.name}`}
-                      cx={cx} 
-                      cy={cy} 
-                      r={payload.isHighlighted ? 8 : 4} 
-                      fill={payload.isHighlighted ? "#1d4ed8" : "#2563eb"} 
-                      stroke="#fff" 
-                      strokeWidth={2} 
-                      style={{ cursor: 'pointer' }}
-                    />
-                  );
-                }}
-                activeDot={{ r: 10, strokeWidth: 0 }}
-                label={{ 
-                  position: 'top', 
-                  fill: '#1e293b', 
-                  fontSize: 10, 
-                  fontWeight: 900,
-                  formatter: (val: number) => val.toFixed(selectedKpi?.unit === '%' || selectedKpi?.id === 'lvs' ? 1 : 0) + (selectedKpi?.unit || '')
-                }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="objetivo" 
-                name="Objetivo" 
-                stroke="#f59e0b" 
-                strokeWidth={2} 
-                strokeDasharray="5 5"
-                dot={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartWrapper>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart 
+                  data={chartData} 
+                  margin={{ top: 40, right: 40, left: 20, bottom: 20 }}
+                  onClick={(data: any) => {
+                    if (data && data.activePayload && data.activePayload[0]) {
+                      const month = data.activePayload[0].payload.fullName;
+                      setHighlightedMonth(prev => prev === month ? null : month);
+                    }
+                  }}
+                >
+                  <defs>
+                    <linearGradient id={`colorKpi-${kpiId}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={kpi?.direction === 'up' ? '#2563eb' : '#f43f5e'} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={kpi?.direction === 'up' ? '#2563eb' : '#f43f5e'} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} 
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} 
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      borderRadius: '20px', 
+                      border: 'none', 
+                      boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                      padding: '20px'
+                    }}
+                    itemStyle={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase' }}
+                  />
+                  <Legend 
+                    verticalAlign="top" 
+                    align="right" 
+                    iconType="circle"
+                    wrapperStyle={{ paddingBottom: '40px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px' }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="valor" 
+                    name="Valor Real" 
+                    stroke={kpi?.direction === 'up' ? '#2563eb' : '#f43f5e'} 
+                    strokeWidth={4} 
+                    fillOpacity={1} 
+                    fill={`url(#colorKpi-${kpiId})`} 
+                    dot={(props: any) => {
+                      const { cx, cy, payload } = props;
+                      return (
+                        <circle 
+                          key={`dot-${payload.name}`}
+                          cx={cx} 
+                          cy={cy} 
+                          r={payload.isHighlighted ? 8 : 4} 
+                          fill={payload.isHighlighted ? (kpi?.direction === 'up' ? "#1d4ed8" : "#e11d48") : (kpi?.direction === 'up' ? "#2563eb" : "#f43f5e")} 
+                          stroke="#fff" 
+                          strokeWidth={2} 
+                          style={{ cursor: 'pointer' }}
+                        />
+                      );
+                    }}
+                    activeDot={{ r: 10, strokeWidth: 0 }}
+                    label={{ 
+                      position: 'top', 
+                      fill: '#1e293b', 
+                      fontSize: 10, 
+                      fontWeight: 900,
+                      formatter: (val: number) => val.toFixed(kpi?.unit === '%' || kpi?.id === 'lvs' ? 1 : 0) + (kpi?.unit || '')
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="objetivo" 
+                    name="Objetivo" 
+                    stroke="#f59e0b" 
+                    strokeWidth={2} 
+                    strokeDasharray="5 5"
+                    dot={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartWrapper>
+          );
+        })}
       </div>
 
       {/* KPI Grid - Ultra Compact Cards */}
@@ -328,16 +362,16 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
             whileHover={{ y: -2 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.01 }}
-            onClick={() => setSelectedKpiId(kpi.id)}
+            onClick={() => toggleKpi(kpi.id)}
             className={`cursor-pointer p-2 rounded-lg border transition-all group relative overflow-hidden ${
-              selectedKpiId === kpi.id 
-                ? 'bg-slate-950 text-white border-slate-950 shadow-lg shadow-slate-900/40' 
+              selectedKpiIds.includes(kpi.id) 
+                ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/40' 
                 : 'bg-white text-slate-900 border-slate-100 hover:border-blue-200 shadow-sm'
             }`}
           >
             <div className="flex justify-between items-start mb-1.5">
-              <div className={`p-0.5 rounded ${selectedKpiId === kpi.id ? 'bg-white/10' : 'bg-slate-50'}`}>
-                <Icons.Activity className={`w-2.5 h-2.5 ${selectedKpiId === kpi.id ? 'text-blue-400' : 'text-slate-400'}`} />
+              <div className={`p-0.5 rounded ${selectedKpiIds.includes(kpi.id) ? 'bg-white/10' : 'bg-slate-50'}`}>
+                <Icons.Activity className={`w-2.5 h-2.5 ${selectedKpiIds.includes(kpi.id) ? 'text-blue-400' : 'text-slate-400'}`} />
               </div>
               <StatusBadge 
                 status={kpi.status === 'success' ? 'success' : kpi.status === 'warning' ? 'warning' : 'error'} 
@@ -345,26 +379,28 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
               />
             </div>
             
-            <h4 className={`text-[10px] font-black uppercase tracking-wider mb-1 truncate ${selectedKpiId === kpi.id ? 'text-slate-400' : 'text-slate-500'}`}>
+            <h4 className={`text-[10px] font-black uppercase tracking-wider mb-1 truncate ${selectedKpiIds.includes(kpi.id) ? 'text-slate-400' : 'text-slate-500'}`}>
               {kpi.name}
             </h4>
             
             <div className="flex items-baseline gap-0.5">
               <span className="text-lg font-black italic tracking-tighter">
-                {Math.round(kpi.value || 0)}
+                {kpi.unit === '%' 
+                  ? Math.round((kpi.value || 0) * 100) 
+                  : (kpi.id === 'lvs' ? (kpi.value || 0).toFixed(1) : Math.round(kpi.value || 0))}
               </span>
-              <span className={`text-[5px] font-black uppercase ${selectedKpiId === kpi.id ? 'text-slate-500' : 'text-slate-400'}`}>
+              <span className={`text-[5px] font-black uppercase ${selectedKpiIds.includes(kpi.id) ? 'text-slate-500' : 'text-slate-400'}`}>
                 {kpi.unit}
               </span>
             </div>
 
-            <div className={`mt-1.5 pt-1.5 border-t ${selectedKpiId === kpi.id ? 'border-white/10' : 'border-slate-50'} flex justify-between items-center`}>
+            <div className={`mt-1.5 pt-1.5 border-t ${selectedKpiIds.includes(kpi.id) ? 'border-white/10' : 'border-slate-50'} flex justify-between items-center`}>
               <div>
-                <span className={`block text-[4px] font-black uppercase tracking-widest ${selectedKpiId === kpi.id ? 'text-slate-500' : 'text-slate-400'}`}>OBJ</span>
+                <span className={`block text-[4px] font-black uppercase tracking-widest ${selectedKpiIds.includes(kpi.id) ? 'text-slate-500' : 'text-slate-400'}`}>OBJ</span>
                 <span className="text-[7px] font-black">{kpi.target}{kpi.unit}</span>
               </div>
-              <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${selectedKpiId === kpi.id ? 'bg-blue-600' : 'bg-slate-100'}`}>
-                <Icons.ArrowRight className={`w-2 h-2 ${selectedKpiId === kpi.id ? 'text-white' : 'text-slate-400'}`} />
+              <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${selectedKpiIds.includes(kpi.id) ? 'bg-blue-600' : 'bg-slate-100'}`}>
+                <Icons.ArrowRight className={`w-2 h-2 ${selectedKpiIds.includes(kpi.id) ? 'text-white' : 'text-slate-400'}`} />
               </div>
             </div>
           </motion.div>
@@ -382,7 +418,14 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
           { 
             header: 'Valor Actual', 
             accessor: 'value',
-            render: (val, row) => <span className="font-black text-slate-900">{Math.round(val || 0)}{row.unit}</span>
+            render: (val, row) => (
+              <span className="font-black text-slate-900">
+                {row.unit === '%' 
+                  ? Math.round((val || 0) * 100) 
+                  : (row.id === 'lvs' ? (val || 0).toFixed(2) : Math.round(val || 0))}
+                {row.unit}
+              </span>
+            )
           },
           { 
             header: 'Objetivo', 
@@ -416,7 +459,7 @@ export const PostventaKpiDashboard: React.FC<PostventaKpiDashboardProps> = ({ on
       />
 
       <ChatBot context={`Estás viendo el Dashboard de Gestión de KPIs de Autosol. 
-        KPI Seleccionado: ${selectedKpi?.name}. 
+        KPIs seleccionados: ${selectedKpiIds.map(id => KPI_DEFS.find(k => k.id === id)?.name).join(', ')}. 
         Filtros: Año ${selectedYear}, Sucursal ${selectedBranch}. 
         Se están monitoreando ${KPI_DEFS.length} indicadores en tiempo real.`} 
       />

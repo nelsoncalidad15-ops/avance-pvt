@@ -103,6 +103,11 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
     });
   }, [data, selectedYear, selectedMonths, selectedBranches, selectedAreas]);
 
+  const availableBranches = useMemo(() => {
+    const dataBranches = Array.from(new Set(data.map(d => d.sucursal))).filter(Boolean);
+    return BRANCHES.filter(b => dataBranches.includes(b));
+  }, [data]);
+
   // Financial KPI Calculations
   const kpis = useMemo(() => {
     const totalFacturacion = filteredData.reduce((sum, item) => sum + (item.avance_fecha || 0), 0);
@@ -166,7 +171,7 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
       'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
     ];
     
-    const branchesToRender = selectedBranches.length > 0 ? selectedBranches : BRANCHES;
+    const branchesToRender = selectedBranches.length > 0 ? selectedBranches : availableBranches;
 
     const results = branchesToRender.map(branch => {
       const branchData = months.map((m, index) => {
@@ -270,7 +275,7 @@ export const PostventaBillingDashboard: React.FC<PostventaBillingDashboardProps>
               >
                 TODAS
               </button>
-              {BRANCHES.map(b => (
+              {availableBranches.map(b => (
                 <button 
                   key={b}
                   onClick={() => toggleBranch(b)}

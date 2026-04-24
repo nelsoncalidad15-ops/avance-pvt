@@ -7,6 +7,7 @@ const normalizeSucursal = (suc: string): string => {
   const s = suc.trim().toUpperCase();
   if (s === 'MOVIL' || s === 'TALLER MOVIL') return 'MOVIL';
   if (s === 'JUJUY') return 'Jujuy';
+  if (s === 'SALTA') return 'Salta';
   if (s === 'SANTA FE') return 'Santa Fe';
   if (s === 'EXPRESS') return 'Express';
   if (s === 'TARTAGAL') return 'Tartagal';
@@ -139,8 +140,8 @@ export const fetchPostventaKpiData = async (url: string): Promise<PostventaKpiRe
   // Mock data if no URL
   if (!url || url === 'postventa_kpi') {
     return [
-      { id: '1', sucursal: 'Santa Fe', mes: 'Enero', anio: 2026, lvs: 4.85, email_validos: 96, tasa_respuesta: 32, dac: 0.15, contrato_mantenimiento: 22, reporte_tecnico: 50, reporte_garantia: 45, ampliacion_trabajo: 55, ppt_diario: 28, conversion_ppt_serv: 62, oudi_servicios: 13, costos_controlables: 75, costo_sueldos: 58, stock_muerto: 12, meses_stock: 3.5, cotizacion_seguros: 10, uodi_repuestos: 8, uodi_posventa: 6.5, incentivo_calidad: 100, plan_incentivo_posventa: 100, plan_incentivo_repuestos: 125, uops_total: 100 },
-      { id: '2', sucursal: 'Jujuy', mes: 'Enero', anio: 2026, lvs: 4.75, email_validos: 94, tasa_respuesta: 28, dac: 0.25, contrato_mantenimiento: 18, reporte_tecnico: 45, reporte_garantia: 50, ampliacion_trabajo: 48, ppt_diario: 24, conversion_ppt_serv: 58, oudi_servicios: 11, costos_controlables: 82, costo_sueldos: 62, stock_muerto: 18, meses_stock: 4.2, cotizacion_seguros: 8, uodi_repuestos: 6, uodi_posventa: 6.1, incentivo_calidad: 90, plan_incentivo_posventa: 95, plan_incentivo_repuestos: 115, uops_total: 95 },
+      { id: '1', sucursal: 'Santa Fe', mes: 'Enero', anio: 2026, lvs: 4.85, email_validos: 96, tasa_respuesta: 32, dac: 0.15, contrato_mantenimiento: 22, reporte_tecnico: 50, reporte_garantia: 45, ampliacion_trabajo: 55, ppt_diario: 28, conversion_ppt_serv: 62, oudi_servicios: 13, grado_ocupacion: 92, productividad: 95, costos_controlables: 75, costo_sueldos: 58, stock_muerto: 12, meses_stock: 3.5, cotizacion_seguros: 10, uodi_repuestos: 8, margen_bruto_primario: 22, uodi_posventa: 6.5 },
+      { id: '2', sucursal: 'Jujuy', mes: 'Enero', anio: 2026, lvs: 4.75, email_validos: 94, tasa_respuesta: 28, dac: 0.25, contrato_mantenimiento: 18, reporte_tecnico: 45, reporte_garantia: 50, ampliacion_trabajo: 48, ppt_diario: 24, conversion_ppt_serv: 58, oudi_servicios: 11, grado_ocupacion: 88, productividad: 92, costos_controlables: 82, costo_sueldos: 62, stock_muerto: 18, meses_stock: 4.2, cotizacion_seguros: 8, uodi_repuestos: 6, margen_bruto_primario: 20, uodi_posventa: 6.1 },
     ];
   }
 
@@ -160,7 +161,7 @@ export const fetchPostventaKpiData = async (url: string): Promise<PostventaKpiRe
         const mappedData = results.data.map((row: any, index: number) => ({
           id: index.toString(),
           sucursal: normalizeSucursal(getVal(row, ['Sucursal', 'Suc.', 'SUCURSAL', 'Suc'])),
-          mes: String(getVal(row, ['Mes', 'MES', 'Month']) || '').trim(),
+          mes: normalizeMonth(getVal(row, ['Mes', 'MES', 'Month'])),
           anio: (() => {
             const a = parseNumber(getVal(row, ['AÑO', 'Año', 'Anio', 'Year']));
             if (a > 0) return a;
@@ -178,17 +179,16 @@ export const fetchPostventaKpiData = async (url: string): Promise<PostventaKpiRe
           ppt_diario: parseNumber(getVal(row, ['PPT diario', 'PPT diario Obj 26'])),
           conversion_ppt_serv: parsePercentage(getVal(row, ['Conversion PPT vs Serv >60%', 'Conversion PPT vs Serv'])),
           oudi_servicios: parsePercentage(getVal(row, ['OUDI Servicios', 'OUDI Servicios Obj >12%'])),
+          grado_ocupacion: parsePercentage(getVal(row, ['Grado de Ocupacion 95%', 'Grado de Ocupacion'])),
+          productividad: parsePercentage(getVal(row, ['Productividad 97%', 'Productividad'])),
           costos_controlables: parsePercentage(getVal(row, ['Costos controlables servicios', 'Costos controlables servicios Obj <80%'])),
           costo_sueldos: parsePercentage(getVal(row, ['Costo sueldos servicios', 'Costo sueldos servicios Obj: <60 %'])),
           stock_muerto: parsePercentage(getVal(row, ['Stock muerto <15%', 'Stock muerto'])),
-          meses_stock: parseNumber(getVal(row, ['Meses de Stock 4M', 'Meses de Stock'])),
-          cotizacion_seguros: parsePercentage(getVal(row, ['Cotizacion seguros'])),
+          meses_stock: parseNumber(getVal(row, ['Meses de Stock 3M', 'Meses de Stock 4M', 'Meses de Stock'])),
+          cotizacion_seguros: parsePercentage(getVal(row, ['Cotizacion seguros Mill', 'Cotizacion seguros'])),
           uodi_repuestos: parsePercentage(getVal(row, ['UDIG repuestos 7%', 'UODI Repuestos'])),
-          uodi_posventa: parsePercentage(getVal(row, ['UODI POSVENTA 6.33%', 'UODI Posventa'])),
-          incentivo_calidad: parsePercentage(getVal(row, ['Incentivo calidad'])),
-          plan_incentivo_posventa: parsePercentage(getVal(row, ['Plan incentivo posventa'])),
-          plan_incentivo_repuestos: parsePercentage(getVal(row, ['Plan incentivo repuestos 120%', 'Plan incentivo repuestos'])),
-          uops_total: parsePercentage(getVal(row, ['UOPS Total']))
+          margen_bruto_primario: parsePercentage(getVal(row, ['Margen bruto primario 23%', 'Margen bruto primario'])),
+          uodi_posventa: parsePercentage(getVal(row, ['UODI POSVENTA 7%', 'UODI POSVENTA 6.33%', 'UODI Posventa']))
         })).filter((d: any) => d.mes && d.sucursal);
 
         resolve(mappedData);
@@ -202,15 +202,20 @@ export const fetchPostventaKpiData = async (url: string): Promise<PostventaKpiRe
 
 const getVal = (row: any, keys: string[]): any => {
   const rowKeys = Object.keys(row);
+  // Normalize a string by removing newlines, extra spaces, and converting to lowercase
+  const normalizeKey = (s: string) => s.toLowerCase().replace(/[\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
+
   for (const key of keys) {
-    const targetKey = key.toLowerCase().trim();
-    // Try exact match first
-    let actualKey = rowKeys.find(k => k.toLowerCase().trim() === targetKey);
+    const targetKeyNormalized = normalizeKey(key);
+    
+    // Try exact normalized match first
+    let actualKey = rowKeys.find(k => normalizeKey(k) === targetKeyNormalized);
     if (actualKey && row[actualKey] !== undefined && row[actualKey] !== null) {
       return row[actualKey];
     }
-    // Try partial match (starts with)
-    actualKey = rowKeys.find(k => k.toLowerCase().trim().startsWith(targetKey));
+    
+    // Try startsWith normalized match
+    actualKey = rowKeys.find(k => normalizeKey(k).startsWith(targetKeyNormalized));
     if (actualKey && row[actualKey] !== undefined && row[actualKey] !== null) {
       return row[actualKey];
     }

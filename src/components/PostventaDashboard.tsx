@@ -111,9 +111,14 @@ export const PostventaDashboard: React.FC<PostventaDashboardProps> = ({ onBack }
     });
   }, [data, selectedYear, selectedMonths, selectedBranches]);
 
+  const availableBranches = useMemo(() => {
+    const dataBranches = Array.from(new Set(data.map(d => d.sucursal))).filter(Boolean);
+    return BRANCHES.filter(b => dataBranches.includes(b));
+  }, [data]);
+
   // KPI Calculations per branch
   const branchKpis = useMemo(() => {
-    const branchesToCalculate = selectedBranches.length > 0 ? selectedBranches : BRANCHES;
+    const branchesToCalculate = selectedBranches.length > 0 ? selectedBranches : availableBranches;
     return branchesToCalculate.map(branch => {
       const branchData = filteredData.filter(d => d.sucursal === branch);
       return {
@@ -141,7 +146,7 @@ export const PostventaDashboard: React.FC<PostventaDashboardProps> = ({ onBack }
 
   // Monthly Chart Data
   const monthlyChartData = useMemo(() => {
-    const branchesToUse = selectedBranches.length > 0 ? selectedBranches : BRANCHES;
+    const branchesToUse = selectedBranches.length > 0 ? selectedBranches : availableBranches;
     return MONTHS.map(m => {
       const entry: any = { name: m.substring(0, 3).toUpperCase() };
       branchesToUse.forEach(branch => {
@@ -222,7 +227,7 @@ export const PostventaDashboard: React.FC<PostventaDashboardProps> = ({ onBack }
               >
                 TODAS
               </button>
-              {BRANCHES.map(branch => (
+              {availableBranches.map(branch => (
                 <button 
                   key={branch}
                   onClick={() => toggleBranch(branch)}
@@ -413,7 +418,7 @@ export const PostventaDashboard: React.FC<PostventaDashboardProps> = ({ onBack }
                   contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }} />
-                {(selectedBranches.length > 0 ? selectedBranches : BRANCHES).map(branch => (
+                {(selectedBranches.length > 0 ? selectedBranches : availableBranches).map(branch => (
                   <Bar key={branch} dataKey={branch} name={branch} fill={BRANCH_COLORS[branch as keyof typeof BRANCH_COLORS]} radius={[4, 4, 0, 0]}>
                     <LabelList dataKey={branch} position="top" style={{ fontSize: '8px', fontWeight: 900, fill: '#64748b' }} />
                   </Bar>
@@ -442,7 +447,7 @@ export const PostventaDashboard: React.FC<PostventaDashboardProps> = ({ onBack }
                   contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }} />
-                {(selectedBranches.length > 0 ? selectedBranches : BRANCHES).map(branch => (
+                {(selectedBranches.length > 0 ? selectedBranches : availableBranches).map(branch => (
                   <Line 
                     key={branch}
                     type="monotone" 
@@ -468,7 +473,7 @@ export const PostventaDashboard: React.FC<PostventaDashboardProps> = ({ onBack }
                   contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }} />
-                {(selectedBranches.length > 0 ? selectedBranches : BRANCHES).map(branch => (
+                {(selectedBranches.length > 0 ? selectedBranches : availableBranches).map(branch => (
                   <Line 
                     key={branch}
                     type="monotone" 
@@ -494,7 +499,7 @@ export const PostventaDashboard: React.FC<PostventaDashboardProps> = ({ onBack }
                   contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }} />
-                {(selectedBranches.length > 0 ? selectedBranches : BRANCHES).map(branch => (
+                {(selectedBranches.length > 0 ? selectedBranches : availableBranches).map(branch => (
                   <Line 
                     key={branch}
                     type="monotone" 
@@ -520,7 +525,7 @@ export const PostventaDashboard: React.FC<PostventaDashboardProps> = ({ onBack }
                   contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase' }} />
-                {(selectedBranches.length > 0 ? selectedBranches : BRANCHES).map(branch => (
+                {(selectedBranches.length > 0 ? selectedBranches : availableBranches).map(branch => (
                   <Line 
                     key={branch}
                     type="monotone" 

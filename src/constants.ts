@@ -33,9 +33,10 @@ export const MONTHS = [
 
 export const YEARS = ["2024", "2025", "2026"];
 
-export const BRANCHES = ["Jujuy", "Express", "MOVIL", "Santa Fe", "Tartagal"];
+export const BRANCHES = ["Salta", "Jujuy", "Express", "MOVIL", "Santa Fe", "Tartagal"];
 
 export const BRANCH_COLORS = {
+  "Salta": "#ef4444",
   "Jujuy": "#3b82f6",
   "Express": "#6366f1",
   "MOVIL": "#f59e0b",
@@ -56,17 +57,16 @@ export const KPI_DEFS = [
   { id: 'ppt_diario', name: 'PPT Diario', target: 26, unit: 'un', direction: 'up' },
   { id: 'conversion_ppt_serv', name: 'Conv. PPT/Serv', target: 60, unit: '%', direction: 'up' },
   { id: 'oudi_servicios', name: 'OUDI Servicios', target: 12, unit: '%', direction: 'up' },
+  { id: 'grado_ocupacion', name: 'Grado Ocupación', target: 95, unit: '%', direction: 'up' },
+  { id: 'productividad', name: 'Productividad', target: 97, unit: '%', direction: 'up' },
   { id: 'costos_controlables', name: 'Costos Contr.', target: 80, unit: '%', direction: 'down' },
   { id: 'costo_sueldos', name: 'Costo Sueldos', target: 60, unit: '%', direction: 'down' },
   { id: 'stock_muerto', name: 'Stock Muerto', target: 15, unit: '%', direction: 'down' },
-  { id: 'meses_stock', name: 'Meses Stock', target: 4, unit: 'm', direction: 'down' },
+  { id: 'meses_stock', name: 'Meses Stock', target: 3, unit: 'm', direction: 'down' },
   { id: 'cotizacion_seguros', name: 'Cotiz. Seguros', target: 10, unit: '%', direction: 'up' },
   { id: 'uodi_repuestos', name: 'UODI Repuestos', target: 7, unit: '%', direction: 'up' },
-  { id: 'uodi_posventa', name: 'UODI Posventa', target: 6.33, unit: '%', direction: 'up' },
-  { id: 'incentivo_calidad', name: 'Inc. Calidad', target: 100, unit: '%', direction: 'up' },
-  { id: 'plan_incentivo_posventa', name: 'Plan Inc. Posv.', target: 100, unit: '%', direction: 'up' },
-  { id: 'plan_incentivo_repuestos', name: 'Plan Inc. Rep.', target: 120, unit: '%', direction: 'up' },
-  { id: 'uops_total', name: 'UOPS Total', target: 100, unit: '%', direction: 'up' },
+  { id: 'margen_bruto_primario', name: 'Margen Bruto', target: 23, unit: '%', direction: 'up' },
+  { id: 'uodi_posventa', name: 'UODI Posventa', target: 7, unit: '%', direction: 'up' },
 ];
 
 export const AREAS: AreaConfig[] = [
