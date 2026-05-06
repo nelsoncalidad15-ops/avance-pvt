@@ -14,38 +14,30 @@ const normalizeSucursal = (suc: string): string => {
   return suc.trim();
 };
 
-const parseNumber = (val: any): number => {
+const parseNumber = (val: any): number | null => {
   if (typeof val === 'number') return val;
-  if (!val || val === 'NA' || val === 'N/A') return 0;
+  if (!val || val === 'NA' || val === 'N/A') return null;
   
   const s = String(val).trim();
-  if (!s) return 0;
+  if (!s || s === 'NA' || s === 'N/A') return null;
   
-  // Remove everything except digits, dots, commas and minus
   let clean = s.replace(/[^-0-9,.]/g, '');
-  
-  // Handle Argentine format (comma as decimal, dot as thousand)
-  // If there's a comma, we assume it's the decimal separator
   if (clean.includes(',')) {
-    // If there's also a dot, it's a thousand separator
-    if (clean.includes('.')) {
-      clean = clean.replace(/\./g, '');
-    }
+    if (clean.includes('.')) clean = clean.replace(/\./g, '');
     clean = clean.replace(',', '.');
   }
   
   const result = parseFloat(clean);
-  return isNaN(result) ? 0 : result;
+  return isNaN(result) ? null : result;
 };
 
-const parsePercentage = (val: any): number => {
-  if (val === undefined || val === null || val === '') return 0;
+const parsePercentage = (val: any): number | null => {
+  if (val === undefined || val === null || val === '' || val === 'NA' || val === 'N/A') return null;
   const s = String(val).trim().replace(',', '.');
   const hasPercent = s.includes('%');
   const clean = s.replace('%', '');
   const num = parseFloat(clean);
-  if (isNaN(num)) return 0;
-  // If it had a % sign, or if the number is > 1 (e.g. 85 meaning 85%), divide by 100
+  if (isNaN(num)) return null;
   return hasPercent || num > 1 ? num / 100 : num;
 };
 
@@ -140,8 +132,8 @@ export const fetchPostventaKpiData = async (url: string): Promise<PostventaKpiRe
   // Mock data if no URL
   if (!url || url === 'postventa_kpi') {
     return [
-      { id: '1', sucursal: 'Santa Fe', mes: 'Enero', anio: 2026, lvs: 4.85, email_validos: 96, tasa_respuesta: 32, dac: 0.15, contrato_mantenimiento: 22, reporte_tecnico: 50, reporte_garantia: 45, ampliacion_trabajo: 55, ppt_diario: 28, conversion_ppt_serv: 62, oudi_servicios: 13, grado_ocupacion: 92, productividad: 95, costos_controlables: 75, costo_sueldos: 58, stock_muerto: 12, meses_stock: 3.5, cotizacion_seguros: 10, uodi_repuestos: 8, margen_bruto_primario: 22, uodi_posventa: 6.5 },
-      { id: '2', sucursal: 'Jujuy', mes: 'Enero', anio: 2026, lvs: 4.75, email_validos: 94, tasa_respuesta: 28, dac: 0.25, contrato_mantenimiento: 18, reporte_tecnico: 45, reporte_garantia: 50, ampliacion_trabajo: 48, ppt_diario: 24, conversion_ppt_serv: 58, oudi_servicios: 11, grado_ocupacion: 88, productividad: 92, costos_controlables: 82, costo_sueldos: 62, stock_muerto: 18, meses_stock: 4.2, cotizacion_seguros: 8, uodi_repuestos: 6, margen_bruto_primario: 20, uodi_posventa: 6.1 },
+      { id: '1', sucursal: 'Santa Fe', mes: 'Enero', anio: 2026, lvs: 4.85, email_validos: 96, tasa_respuesta: 32, dac: 0.15, contrato_mantenimiento: 22, reporte_tecnico: 50, reporte_garantia: 45, ampliacion_trabajo: 55, ppt_diario: 28, conversion_ppt_serv: 62, oudi_servicios: 13, grado_ocupacion: 92, productividad: 95, costos_controlables: 75, costo_sueldos: 58, stock_muerto: 12, meses_stock: 3.5, cotizacion_seguros: 10, uodi_repuestos: 8, margen_bruto_primario: 22, uodi_posventa: 6.5, incentivo: 100, rep_max_compra: 85, rep_max_autoparte: 90, prom_compra: 80, prom_autoparte: 82, oc_repuestos: 75, oc_accesorios: 70, oc_lubricante_taller: 95, oc_lubricante_mayorista: 88, promedio_oc_lubricantes: 92 },
+      { id: '2', sucursal: 'Jujuy', mes: 'Enero', anio: 2026, lvs: 4.75, email_validos: 94, tasa_respuesta: 28, dac: 0.25, contrato_mantenimiento: 18, reporte_tecnico: 45, reporte_garantia: 50, ampliacion_trabajo: 48, ppt_diario: 24, conversion_ppt_serv: 58, oudi_servicios: 11, grado_ocupacion: 88, productividad: 92, costos_controlables: 82, costo_sueldos: 62, stock_muerto: 18, meses_stock: 4.2, cotizacion_seguros: 8, uodi_repuestos: 6, margen_bruto_primario: 20, uodi_posventa: 6.1, incentivo: 95, rep_max_compra: 80, rep_max_autoparte: 85, prom_compra: 75, prom_autoparte: 78, oc_repuestos: 70, oc_accesorios: 65, oc_lubricante_taller: 90, oc_lubricante_mayorista: 82, promedio_oc_lubricantes: 86 },
     ];
   }
 
@@ -185,10 +177,20 @@ export const fetchPostventaKpiData = async (url: string): Promise<PostventaKpiRe
           costo_sueldos: parsePercentage(getVal(row, ['Costo sueldos servicios', 'Costo sueldos servicios Obj: <60 %'])),
           stock_muerto: parsePercentage(getVal(row, ['Stock muerto <15%', 'Stock muerto'])),
           meses_stock: parseNumber(getVal(row, ['Meses de Stock 3M', 'Meses de Stock 4M', 'Meses de Stock'])),
-          cotizacion_seguros: parsePercentage(getVal(row, ['Cotizacion seguros Mill', 'Cotizacion seguros'])),
-          uodi_repuestos: parsePercentage(getVal(row, ['UDIG repuestos 7%', 'UODI Repuestos'])),
+          cotizacion_seguros: parseNumber(getVal(row, ['Cotizacion seguros Mill', 'Cotizacion seguros'])),
+          uodi_repuestos: parsePercentage(getVal(row, ['UDIG repuestos 7%', 'UODI Repuestos', 'UDIG repuestos'])),
           margen_bruto_primario: parsePercentage(getVal(row, ['Margen bruto primario 23%', 'Margen bruto primario'])),
-          uodi_posventa: parsePercentage(getVal(row, ['UODI POSVENTA 7%', 'UODI POSVENTA 6.33%', 'UODI Posventa']))
+          uodi_posventa: parsePercentage(getVal(row, ['UODI POSVENTA 7%', 'UODI POSVENTA 6.33%', 'UODI Posventa'])),
+          incentivo: parseNumber(getVal(row, ['Incentivo'])),
+          rep_max_compra: parsePercentage(getVal(row, ['Rep. Max Compra'])),
+          rep_max_autoparte: parsePercentage(getVal(row, ['Rep. Max. Automarte', 'Rep. Max. Autoparte'])),
+          prom_compra: parsePercentage(getVal(row, ['Prom Compra'])),
+          prom_autoparte: parsePercentage(getVal(row, ['Prom. Autoparte'])),
+          oc_repuestos: parsePercentage(getVal(row, ['OC. Repuestos'])),
+          oc_accesorios: parsePercentage(getVal(row, ['OC. Accesorios'])),
+          oc_lubricante_taller: parsePercentage(getVal(row, ['OC. Lubricante Taller'])),
+          oc_lubricante_mayorista: parsePercentage(getVal(row, ['OC. Lubricante Mayorista'])),
+          promedio_oc_lubricantes: parsePercentage(getVal(row, ['Promedio OC. Lubricantes']))
         })).filter((d: any) => d.mes && d.sucursal);
 
         resolve(mappedData);

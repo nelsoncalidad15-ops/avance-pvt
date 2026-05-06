@@ -63,10 +63,20 @@ export const KPI_DEFS = [
   { id: 'costo_sueldos', name: 'Costo Sueldos', target: 60, unit: '%', direction: 'down' },
   { id: 'stock_muerto', name: 'Stock Muerto', target: 15, unit: '%', direction: 'down' },
   { id: 'meses_stock', name: 'Meses Stock', target: 3, unit: 'm', direction: 'down' },
-  { id: 'cotizacion_seguros', name: 'Cotiz. Seguros', target: 10, unit: '%', direction: 'up' },
+  { id: 'cotizacion_seguros', name: 'Cotiz. Seguros', target: 10, unit: '$', direction: 'up' },
   { id: 'uodi_repuestos', name: 'UODI Repuestos', target: 7, unit: '%', direction: 'up' },
   { id: 'margen_bruto_primario', name: 'Margen Bruto', target: 23, unit: '%', direction: 'up' },
   { id: 'uodi_posventa', name: 'UODI Posventa', target: 7, unit: '%', direction: 'up' },
+  { id: 'incentivo', name: 'Incentivo', target: 100, unit: '$', direction: 'up' },
+  { id: 'rep_max_compra', name: 'Rep. Max Compra', target: 100, unit: '%', direction: 'up' },
+  { id: 'rep_max_autoparte', name: 'Rep. Max. Autop.', target: 100, unit: '%', direction: 'up' },
+  { id: 'prom_compra', name: 'Prom Compra', target: 100, unit: '%', direction: 'up' },
+  { id: 'prom_autoparte', name: 'Prom. Autop.', target: 100, unit: '%', direction: 'up' },
+  { id: 'oc_repuestos', name: 'OC. Repuestos', target: 100, unit: '%', direction: 'up' },
+  { id: 'oc_accesorios', name: 'OC. Accesorios', target: 100, unit: '%', direction: 'up' },
+  { id: 'oc_lubricante_taller', name: 'OC. Lub. Taller', target: 100, unit: '%', direction: 'up' },
+  { id: 'oc_lubricante_mayorista', name: 'OC. Lub. Mayor.', target: 100, unit: '%', direction: 'up' },
+  { id: 'promedio_oc_lubricantes', name: 'Prom. Lub.', target: 100, unit: '%', direction: 'up' },
 ];
 
 export const AREAS: AreaConfig[] = [

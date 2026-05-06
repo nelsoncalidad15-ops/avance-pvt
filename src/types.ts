@@ -218,6 +218,16 @@ export interface PostventaKpiRecord {
   uodi_repuestos: number | null;
   margen_bruto_primario: number | null;
   uodi_posventa: number | null;
+  incentivo: number | null;
+  rep_max_compra: number | null;
+  rep_max_autoparte: number | null;
+  prom_compra: number | null;
+  prom_autoparte: number | null;
+  oc_repuestos: number | null;
+  oc_accesorios: number | null;
+  oc_lubricante_taller: number | null;
+  oc_lubricante_mayorista: number | null;
+  promedio_oc_lubricantes: number | null;
   [key: string]: any;
 }
 
